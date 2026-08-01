@@ -10338,6 +10338,43 @@ def _retag_legacy_worker_sessions(workspaces_root_path: str) -> None:
         _log.debug("kanban worker: legacy session retag skipped (%s)", exc)
 
 
+def _resume_session_id_for_task(
+    task_id: str,
+    *,
+    board: Optional[str] = None,
+) -> Optional[str]:
+    """Return the most recent worker session id recorded for ``task_id``.
+
+    Workers stamp their ``HERMES_SESSION_ID`` into
+    ``task_runs.metadata.worker_session_id`` on complete/block (see
+    ``tools/kanban_tools._stamp_worker_session_metadata``). Spawning the
+    next worker with ``--resume <sid>`` carries the prior conversation
+    forward instead of starting from a blank session on every dispatch —
+    that blank-session restart is exactly the "information loss" workers
+    suffer today when a task is unblocked or reopened.
+
+    Returns ``None`` when no prior run recorded a session (first dispatch,
+    crashed runs, DB errors) — the caller falls back to the existing
+    fresh-session behavior. Fail-open: a DB hiccup must never block a
+    spawn.
+    """
+    try:
+        with connect_closing(board=board) as conn:
+            row = conn.execute(
+                "SELECT metadata FROM task_runs "
+                "WHERE task_id = ? AND metadata LIKE '%worker_session_id%' "
+                "ORDER BY id DESC LIMIT 1",
+                (task_id,),
+            ).fetchone()
+            if not row or not row["metadata"]:
+                return None
+            meta = json.loads(row["metadata"])
+            sid = meta.get("worker_session_id")
+            return str(sid) if sid else None
+    except Exception:
+        return None
+
+
 def _default_spawn(
     task: Task,
     workspace: str,
@@ -10505,6 +10542,15 @@ def _default_spawn(
     worker_toolsets = _resolve_worker_cli_toolsets(env.get("HERMES_HOME"))
     if worker_toolsets:
         cmd.extend(["--toolsets", ",".join(worker_toolsets)])
+    # Session continuity: resume the last worker session for this task so a
+    # re-spawned worker (unblock/reopen/crash-retry) inherits the prior
+    # conversation instead of starting from a blank session. The session id
+    # was stamped into task_runs.metadata.worker_session_id by the previous
+    # worker's complete/block. `--resume` is a top-level CLI flag; the
+    # resulting argv is `hermes ... --resume <sid> chat -q <prompt>`.
+    resume_sid = _resume_session_id_for_task(task.id, board=board)
+    if resume_sid:
+        cmd.extend(["--resume", resume_sid])
     cmd.extend([
         "chat",
         "-q", prompt,
