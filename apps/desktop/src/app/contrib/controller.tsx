@@ -2,6 +2,7 @@ import { useStore } from '@nanostores/react'
 import { atom, computed } from 'nanostores'
 import type { CSSProperties, ReactElement, PointerEvent as ReactPointerEvent } from 'react'
 
+import { registerAdeConsole } from '@/app/ade/register'
 import { SessionDraftTitle } from '@/app/chat/session-draft-title'
 import { SessionStatusDot } from '@/app/chat/session-status-dot'
 import { PALETTE_AREA, type PaletteContribution, paletteToggle } from '@/app/command-palette/contrib'
@@ -844,3 +845,7 @@ export function ContribController() {
 // Referenced type kept for plugin authors' reference (payload shape of
 // statusBar.* contributions).
 export type { StatusbarItem }
+
+// ADE console: a first-class core page at `/ade` + a Sessions-sidebar row.
+// Registered through the same registry as every other core surface.
+registerAdeConsole()

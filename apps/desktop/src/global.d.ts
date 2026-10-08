@@ -55,6 +55,13 @@ declare global {
       }) => Promise<GatewayWsUrlResult>
       // Union agent roster across every registered connection.
       getAgentRoster?: () => Promise<DesktopAgentRoster>
+      // ADE console (read-only session state). Main spawns the stdlib python
+      // probe (`Projects/ade-app/ade_probe.py` → `data.py`); the gateway
+      // contract is untouched. See electron/ade-ipc.ts + src/app/ade.
+      ade?: {
+        state: (limit: number) => Promise<AdeProbeResult>
+        summary: (sessionId: string) => Promise<AdeProbeResult>
+      }
       // Credential-free routes across the union connection registry. The
       // optional profile list is used only by the single-local v1 fallback;
       // endpoint and auth material never crosses the IPC boundary.

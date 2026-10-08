@@ -465,6 +465,13 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
   renamePath: (targetPath, newName) => ipcRenderer.invoke('hermes:fs:rename', targetPath, newName),
   writeTextFile: (filePath, content) => ipcRenderer.invoke('hermes:fs:writeText', filePath, content),
   trashPath: targetPath => ipcRenderer.invoke('hermes:fs:trash', targetPath),
+  // ADE console (read-only session state). Main spawns the python probe; see
+  // electron/ade-ipc.ts. `state` returns the tree; `summary` the per-session
+  // content summary + body excerpts.
+  ade: {
+    state: (limit: number) => ipcRenderer.invoke('hermes:ade:state', limit),
+    summary: (sessionId: string) => ipcRenderer.invoke('hermes:ade:summary', sessionId)
+  },
   git: {
     worktreeList: repoPath => ipcRenderer.invoke('hermes:git:worktreeList', repoPath),
     worktreeAdd: (repoPath, options) => ipcRenderer.invoke('hermes:git:worktreeAdd', repoPath, options),

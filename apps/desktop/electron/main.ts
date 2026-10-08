@@ -46,6 +46,7 @@ import {
   withRetry
 } from './api-transport'
 import { appIconCandidates, resolveAppIcon, shouldOverrideDockIcon } from './app-icon'
+import { defaultAdeIpcDeps, registerAdeIpc } from './ade-ipc'
 import { stageAppInstallerFile } from './app-installer-file'
 import {
   appVersionInfo,
@@ -18625,6 +18626,10 @@ registerFsIpc({
 
 // Git-driven features (worktrees, review pane, repo scan) — see git-ipc.ts.
 registerGitIpc({ resolveGitBinary, resolveGhBinary })
+
+// ADE console data (hermes:ade:*) — spawns the read-only python probe in a
+// child process; never touches the tui_gateway contract. See ade-ipc.ts.
+registerAdeIpc(defaultAdeIpcDeps(HERMES_HOME, os.homedir()))
 
 // Client-side loopback callback for MCP OAuth against remote backends — see
 // mcp-oauth-callback-ipc.ts.
